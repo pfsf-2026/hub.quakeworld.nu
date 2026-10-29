@@ -1,0 +1,12 @@
+{
+  "name": "QuakeWorld Hub",
+  "short_name": "QW Hub",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#111122",
+  "theme_color": "#111122",
+  "icons": [
+    { "src": "/assets/img/app/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/assets/img/app/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
