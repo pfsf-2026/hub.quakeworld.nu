@@ -43,10 +43,21 @@ export function isFullscreen(): boolean {
   return !isFullWindow() && Boolean(document.fullscreenElement);
 }
 
+// iphone safari has no element fullscreen (only <video>)
+export function isFullscreenSupported(): boolean {
+  return Boolean(document.fullscreenEnabled);
+}
+
 export function toggleFullscreen(elementId: string) {
   const element = document.getElementById(elementId);
 
   if (!element) {
+    return;
+  }
+
+  // e.g. double tap on iphone: full-window is the closest it gets
+  if (!isFullscreenSupported()) {
+    toggleFullWindow(elementId);
     return;
   }
 
