@@ -79,6 +79,8 @@ const SliderRoot = ({
   const throttledJump = useThrottle(jump, 200);
   const [dragValue, setDragValue] = useState<number | null>(null);
   const releaseTimeout = useRef<number | undefined>(undefined);
+  const restTimeout = useRef<number | undefined>(undefined);
+  const seek = useSingleSeek();
   useUpdateInterval(fte ? 100 : null);
 
   useEffect(() => {
@@ -102,6 +104,12 @@ const SliderRoot = ({
     if (isTouch) {
       window.clearTimeout(releaseTimeout.current);
       setDragValue(values[0]);
+      // scrubbing: seek where the finger rests, not on every move
+      window.clearTimeout(restTimeout.current);
+      restTimeout.current = window.setTimeout(
+        () => seek(values[0]),
+        SCRUB_REST_MS,
+      );
     } else if (fte) {
       setJump(values[0]);
     }
@@ -112,7 +120,8 @@ const SliderRoot = ({
       return;
     }
 
-    fte.demoJump(values[0]);
+    window.clearTimeout(restTimeout.current);
+    seek(values[0]);
     // keep the thumb where it was released until the engine has caught up
     releaseTimeout.current = window.setTimeout(() => setDragValue(null), 500);
   }
@@ -207,6 +216,58 @@ const SliderRoot = ({
     </Slider.Root>
   );
 };
+
+// touch scrubbing: how long the finger rests before the demo seeks there
+const SCRUB_REST_MS = 200;
+// a seek is done when playback is this close to the target (seconds), or after the timeout
+const SEEK_DONE_DISTANCE = 1.5;
+const SEEK_TIMEOUT_MS = 1500;
+
+// one seek at a time: a seek requested while the engine is still seeking waits,
+// and only the latest one runs (queued seeks make playback jitter on phones)
+function useSingleSeek() {
+  const fte = useFteController();
+  const state = useRef<{ busy: boolean; next: number | null }>({
+    busy: false,
+    next: null,
+  });
+
+  function seek(time: number) {
+    if (!fte) {
+      return;
+    }
+
+    if (state.current.busy) {
+      state.current.next = time;
+      return;
+    }
+
+    state.current.busy = true;
+    fte.demoJump(time);
+    const startedAt = Date.now();
+
+    const poll = window.setInterval(() => {
+      const isDone =
+        Math.abs(fte.getDemoElapsedTime() - time) < SEEK_DONE_DISTANCE ||
+        Date.now() - startedAt > SEEK_TIMEOUT_MS;
+
+      if (!isDone) {
+        return;
+      }
+
+      window.clearInterval(poll);
+      state.current.busy = false;
+      const { next } = state.current;
+      state.current.next = null;
+
+      if (next !== null && next !== time) {
+        seek(next);
+      }
+    }, 50);
+  }
+
+  return seek;
+}
 
 // sorted, non-overlapping ranges (required by getTrackBackground)
 function mergeRanges(ranges: number[][]): number[][] {
