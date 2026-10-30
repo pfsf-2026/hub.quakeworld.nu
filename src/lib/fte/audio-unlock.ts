@@ -1,3 +1,5 @@
+import { isIOS } from "@/utils/ios";
+
 // ios: audio may only start from a completed tap (touchend/click). the engine (emscripten
 // openal) resumes its AudioContext once, on the first touchstart, which ios ignores, so
 // iphone stays silent whatever the volume. track the engine's contexts and resume them on
@@ -8,7 +10,8 @@ let isInstalled = false;
 type AudioSessionNavigator = Navigator & { audioSession?: { type: string } };
 
 export function installAudioUnlock() {
-  if (isInstalled || typeof window.AudioContext === "undefined") {
+  // other browsers start the engine's audio themselves
+  if (isInstalled || !isIOS() || typeof window.AudioContext === "undefined") {
     return;
   }
 
