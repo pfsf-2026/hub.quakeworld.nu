@@ -9,6 +9,7 @@ import { usePolledState } from "@/hooks/use-polled-value";
 import { getAssetUrl } from "@/lib/cloudfront/assets";
 import { toggleFullscreen } from "@/utils/fullscreen";
 import { FteController } from "./fte-controller";
+import { installTouchPositionFix } from "./touch-position";
 import type {
   FteAssets,
   FteCommandEvent,
@@ -62,7 +63,10 @@ export function useFteLoader({
         ...(startCommand ? `+${startCommand}`.split(" ") : []),
       ],
       files: assets,
-      onFteReady: () => setIsEngineReady(true),
+      onFteReady: () => {
+        installTouchPositionFix();
+        setIsEngineReady(true);
+      },
       onHubRequest: (name) => {
         if (name === "fullscreen") {
           toggleFullscreen("ftePlayer");
