@@ -34,9 +34,11 @@ export const FteDemoPlayerControls = () => {
   useEventListener("fteplayer.mouse.active", setIsActive);
 
   return (
+    // safe area: full-window on notched iphones reaches the rounded corners and the home
+    // indicator (insets are 0 elsewhere)
     <div
       className={clsx(
-        "flex flex-wrap sm:grid sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] transition-opacity duration-200 bg-black/60 justify-between items-center sm:px-1",
+        "flex flex-wrap sm:grid sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] transition-opacity duration-200 bg-black/60 justify-between items-center pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] pb-[env(safe-area-inset-bottom)] sm:pl-[max(0.25rem,env(safe-area-inset-left))] sm:pr-[max(0.25rem,env(safe-area-inset-right))]",
         {
           "opacity-0": !showClipEditor && isIdle,
         },

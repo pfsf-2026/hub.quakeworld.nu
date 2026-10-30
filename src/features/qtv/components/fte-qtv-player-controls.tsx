@@ -21,9 +21,11 @@ export function FteQtvPlayerControls() {
   useEventListener("fteplayer.mouse.active", setIsActive);
 
   return (
+    // safe area: full-window on notched iphones reaches the rounded corners and the home
+    // indicator (insets are 0 elsewhere)
     <div
       className={clsx(
-        "flex flex-wrap transition-opacity duration-200 bg-black/60 justify-between items-center sm:px-1 sm:gap-y-2",
+        "flex flex-wrap transition-opacity duration-200 bg-black/60 justify-between items-center pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] pb-[env(safe-area-inset-bottom)] sm:pl-[max(0.25rem,env(safe-area-inset-left))] sm:pr-[max(0.25rem,env(safe-area-inset-right))] sm:gap-y-2",
         {
           "opacity-0": isIdle,
         },
