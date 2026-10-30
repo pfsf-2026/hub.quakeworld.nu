@@ -144,6 +144,8 @@ const SliderRoot = ({
       value={[value]}
       onValueChange={handleValueChange}
       onValueCommit={handleValueCommit}
+      // ios may cancel a touch (system gesture): drop the drag, no seek
+      onPointerCancel={() => setDragValue(null)}
       min={min}
       max={max}
       step={1}
