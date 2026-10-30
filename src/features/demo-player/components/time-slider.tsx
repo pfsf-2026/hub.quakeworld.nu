@@ -79,7 +79,6 @@ const SliderRoot = ({
   const throttledJump = useThrottle(jump, 200);
   const [dragValue, setDragValue] = useState<number | null>(null);
   const releaseTimeout = useRef<number | undefined>(undefined);
-  const restTimeout = useRef<number | undefined>(undefined);
   const seek = useSingleSeek();
   useUpdateInterval(fte ? 100 : null);
 
@@ -104,12 +103,8 @@ const SliderRoot = ({
     if (isTouch) {
       window.clearTimeout(releaseTimeout.current);
       setDragValue(values[0]);
-      // scrubbing: seek where the finger rests, not on every move
-      window.clearTimeout(restTimeout.current);
-      restTimeout.current = window.setTimeout(
-        () => seek(values[0]),
-        SCRUB_REST_MS,
-      );
+      // scrubbing: the demo follows the finger as fast as the engine seeks
+      seek(values[0]);
     } else if (fte) {
       setJump(values[0]);
     }
@@ -120,7 +115,6 @@ const SliderRoot = ({
       return;
     }
 
-    window.clearTimeout(restTimeout.current);
     seek(values[0]);
     // keep the thumb where it was released until the engine has caught up
     releaseTimeout.current = window.setTimeout(() => setDragValue(null), 500);
@@ -217,8 +211,6 @@ const SliderRoot = ({
   );
 };
 
-// touch scrubbing: how long the finger rests before the demo seeks there
-const SCRUB_REST_MS = 200;
 // a seek is done when playback is this close to the target (seconds), or after the timeout
 const SEEK_DONE_DISTANCE = 1.5;
 const SEEK_TIMEOUT_MS = 1500;
