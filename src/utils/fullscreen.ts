@@ -98,6 +98,7 @@ function enterFullWindow(elementId: string) {
 
   html.style.setProperty("overflow", "clip");
   body.style.setProperty("overflow", "clip");
+  setViewportFitCover(true);
   notifyChange();
 }
 
@@ -112,5 +113,29 @@ export function exitFullWindow() {
   element.style.cssText = elementCss;
   document.documentElement.style.cssText = htmlCss;
   document.body.style.cssText = bodyCss;
+  setViewportFitCover(false);
   notifyChange();
+}
+
+// notched iphones in landscape: the viewport stops at the safe area, leaving black
+// strips on both sides. full-window covers them (the notch may cover part of the hud)
+const VIEWPORT_FIT_COVER = "viewport-fit=cover";
+
+function setViewportFitCover(enabled: boolean) {
+  const meta = document.querySelector<HTMLMetaElement>('meta[name="viewport"]');
+
+  if (!meta) {
+    return;
+  }
+
+  const parts = meta.content
+    .split(",")
+    .map((part) => part.trim())
+    .filter((part) => part && part !== VIEWPORT_FIT_COVER);
+
+  if (enabled) {
+    parts.push(VIEWPORT_FIT_COVER);
+  }
+
+  meta.content = parts.join(", ");
 }
