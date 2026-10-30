@@ -8,6 +8,7 @@ import {
 import { usePolledState } from "@/hooks/use-polled-value";
 import { getAssetUrl } from "@/lib/cloudfront/assets";
 import { toggleFullscreen } from "@/utils/fullscreen";
+import { installAudioUnlock } from "./audio-unlock";
 import { FteController } from "./fte-controller";
 import type {
   FteAssets,
@@ -43,6 +44,8 @@ export function useFteLoader({
   const [isEngineReady, setIsEngineReady] = useState(false);
 
   useEffect(() => {
+    installAudioUnlock();
+
     // a config saved by `cfg_save` (fte.cfg) runs after the hub config and overrides it
     // (e.g. stale cl_download_mapsrc). the hub persists its settings in hub_settings.cfg
     try {
