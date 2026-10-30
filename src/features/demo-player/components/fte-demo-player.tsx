@@ -92,10 +92,13 @@ const DemoPlayer = ({
       {fte && (
         <div
           id="ftePlayerControls"
-          className={"absolute z-30 bottom-0 w-full"}
           // ios full-window: the controls sit at the screen bottom, raise them to leave room
-          // below the time slider for fine scrubbing (slide down)
-          style={isTouch && isFullWindow() ? { bottom: "4rem" } : undefined}
+          // below the time slider for fine scrubbing (slide down). raised over the game, so
+          // mostly see-through
+          className={clsx("absolute z-30 bottom-0 w-full", {
+            "opacity-80 [&>*]:bg-black/20": isRaisedControls(),
+          })}
+          style={isRaisedControls() ? { bottom: "4rem" } : undefined}
         >
           <FteDemoPlayerControls />
         </div>
@@ -105,6 +108,10 @@ const DemoPlayer = ({
 };
 
 const isTouch = isIOS();
+
+function isRaisedControls(): boolean {
+  return isTouch && isFullWindow();
+}
 
 function useDisplayModeUpdate() {
   const [, update] = useReducer((x: number) => x + 1, 0);
