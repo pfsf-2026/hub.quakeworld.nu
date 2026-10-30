@@ -1,4 +1,5 @@
 import { useFteController, useFtePolledValue } from "@/lib/fte/hooks";
+import { isIOS } from "@/utils/ios";
 import { VolumeSlider } from "./volume-slider";
 import { VolumeToggle } from "./volume-toggle";
 
@@ -13,6 +14,12 @@ export const Volume = () => {
 
   function handleToggleClick() {
     if (!fte) {
+      return;
+    }
+
+    // ios: the volume buttons set the loudness, unmute plays at full player volume
+    if (isIOS() && fte.isMuted()) {
+      fte.setVolume(fte.getMaxVolume());
       return;
     }
 
@@ -34,12 +41,15 @@ export const Volume = () => {
         onClick={handleToggleClick}
         volume={volume}
       />
-      <VolumeSlider
-        volume={volume}
-        isMuted={isMuted}
-        maxVolume={fte.getMaxVolume()}
-        onChange={handleVolumeChange}
-      />
+      {/* ios: pages cannot read or follow the device volume, a second volume control would only conflict with it */}
+      {!isIOS() && (
+        <VolumeSlider
+          volume={volume}
+          isMuted={isMuted}
+          maxVolume={fte.getMaxVolume()}
+          onChange={handleVolumeChange}
+        />
+      )}
     </>
   );
 };
