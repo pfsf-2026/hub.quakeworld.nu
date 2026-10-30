@@ -80,6 +80,8 @@ const SliderRoot = ({
   const [dragValue, setDragValue] = useState<number | null>(null);
   const releaseTimeout = useRef<number | undefined>(undefined);
   const seek = useSingleSeek();
+  // fine scrubbing: the finger's last slider value and its distance from the bar
+  const scrub = useRef({ lastFingerValue: -1, value: 0, distance: 0 });
   useUpdateInterval(fte ? 100 : null);
 
   useEffect(() => {
@@ -102,9 +104,22 @@ const SliderRoot = ({
 
     if (isTouch) {
       window.clearTimeout(releaseTimeout.current);
-      setDragValue(values[0]);
+      const fingerValue = values[0];
+      const state = scrub.current;
+
+      // the first touch jumps to the finger, then moves are scaled by the scrub speed
+      if (state.lastFingerValue < 0) {
+        state.value = fingerValue;
+      } else {
+        const speed = getScrubSpeed(state.distance).factor;
+        const delta = (fingerValue - state.lastFingerValue) * speed;
+        state.value = Math.min(max, Math.max(0, state.value + delta));
+      }
+
+      state.lastFingerValue = fingerValue;
+      setDragValue(state.value);
       // scrubbing: the demo follows the finger as fast as the engine seeks
-      seek(values[0]);
+      seek(state.value);
     } else if (fte) {
       setJump(values[0]);
     }
@@ -115,9 +130,24 @@ const SliderRoot = ({
       return;
     }
 
-    seek(values[0]);
+    seek(scrub.current.value);
+    scrub.current.lastFingerValue = -1;
     // keep the thumb where it was released until the engine has caught up
     releaseTimeout.current = window.setTimeout(() => setDragValue(null), 500);
+  }
+
+  // distance of the finger above or below the bar (the bar may sit at the screen bottom)
+  function handlePointer(e: React.PointerEvent<HTMLElement>) {
+    if (!isTouch || e.pointerType !== "touch") {
+      return;
+    }
+
+    const { top, height } = e.currentTarget.getBoundingClientRect();
+    scrub.current.distance = Math.abs(e.clientY - (top + height / 2));
+
+    if (e.type === "pointerdown") {
+      scrub.current.lastFingerValue = -1;
+    }
   }
 
   const isDragging = dragValue !== null;
@@ -147,6 +177,8 @@ const SliderRoot = ({
       value={[value]}
       onValueChange={handleValueChange}
       onValueCommit={handleValueCommit}
+      onPointerDown={handlePointer}
+      onPointerMove={handlePointer}
       // ios may cancel a touch (system gesture): drop the drag, no seek
       onPointerCancel={() => setDragValue(null)}
       min={min}
@@ -161,6 +193,7 @@ const SliderRoot = ({
           }}
         >
           {formatElapsed(value - countdownLength)}
+          {getScrubSpeed(scrub.current.distance).label}
         </div>
       )}
 
@@ -211,6 +244,25 @@ const SliderRoot = ({
   );
 };
 
+// slide the finger away from the bar (up or down) to scrub slower, like ios media players
+const SCRUB_SPEEDS = [
+  { distance: 0, factor: 1, label: "" },
+  { distance: 40, factor: 1 / 4, label: " · ¼ speed" },
+  { distance: 100, factor: 1 / 15, label: " · fine" },
+];
+
+function getScrubSpeed(distance: number) {
+  let speed = SCRUB_SPEEDS[0];
+
+  for (const candidate of SCRUB_SPEEDS) {
+    if (distance >= candidate.distance) {
+      speed = candidate;
+    }
+  }
+
+  return speed;
+}
+
 // a seek is done when playback is this close to the target (seconds), or after the timeout
 const SEEK_DONE_DISTANCE = 1.5;
 const SEEK_TIMEOUT_MS = 1500;
@@ -254,7 +306,11 @@ function useSingleSeek() {
 
       if (next !== null && next !== time) {
         seek(next);
+        return;
       }
+
+      // sounds started while seeking play late and stay out of sync, clear them
+      fte.command("stopsound");
     }, 50);
   }
 
