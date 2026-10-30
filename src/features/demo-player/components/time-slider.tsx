@@ -9,6 +9,7 @@ import { useThrottle } from "@/hooks/use-throttle";
 import { useUpdateInterval } from "@/hooks/use-update-interval";
 import { useFteController } from "@/lib/fte/hooks";
 import { useUrlClipParams } from "@/utils/game-url";
+import { isIOS } from "@/utils/ios";
 import { formatElapsed } from "@/utils/time";
 
 export function TimeSlider() {
@@ -52,20 +53,32 @@ export function TimeSlider() {
         onMouseMove={handleMouseMove}
       >
         <div ref={sliderRootRef}>
-          <SliderRoot max={maxValue} />
+          <SliderRoot max={maxValue} countdownLength={countdownLength} />
         </div>
       </div>
     </>
   );
 }
 
-const SliderRoot = ({ max }: { max: number }) => {
+// touch (ios): no hover, so the slider is finger sized, shows the time while dragging
+// and seeks once on release (seeking on every move stutters on phones)
+const isTouch = isIOS();
+
+const SliderRoot = ({
+  max,
+  countdownLength,
+}: {
+  max: number;
+  countdownLength: number;
+}) => {
   const fte = useFteController();
   const { range: clipRange, isEnabled: clipEditorEnabled } = useClipEditor();
   const { from, to, hasParams } = useUrlClipParams();
   const { clips } = useClipPlaylist();
   const [jump, setJump] = useState<number>(-1);
   const throttledJump = useThrottle(jump, 200);
+  const [dragValue, setDragValue] = useState<number | null>(null);
+  const releaseTimeout = useRef<number | undefined>(undefined);
   useUpdateInterval(fte ? 100 : null);
 
   useEffect(() => {
@@ -82,10 +95,30 @@ const SliderRoot = ({ max }: { max: number }) => {
   }
 
   function handleValueChange(values: number[]) {
-    if (fte && values.length > 0) {
+    if (values.length === 0) {
+      return;
+    }
+
+    if (isTouch) {
+      window.clearTimeout(releaseTimeout.current);
+      setDragValue(values[0]);
+    } else if (fte) {
       setJump(values[0]);
     }
   }
+
+  function handleValueCommit(values: number[]) {
+    if (!isTouch || !fte || values.length === 0) {
+      return;
+    }
+
+    fte.demoJump(values[0]);
+    // keep the thumb where it was released until the engine has caught up
+    releaseTimeout.current = window.setTimeout(() => setDragValue(null), 500);
+  }
+
+  const isDragging = dragValue !== null;
+  const value = dragValue ?? fte.getDemoElapsedTime();
 
   const min = 0;
   let range = [0, 0];
@@ -104,13 +137,28 @@ const SliderRoot = ({ max }: { max: number }) => {
 
   return (
     <Slider.Root
-      className="relative flex items-center select-none touch-none w-full h-8 group cursor-pointer transition-opacity duration-500"
-      value={[fte.getDemoElapsedTime()]}
+      className={clsx(
+        "relative flex items-center select-none touch-none w-full group cursor-pointer transition-opacity duration-500",
+        isTouch ? "h-11" : "h-8",
+      )}
+      value={[value]}
       onValueChange={handleValueChange}
+      onValueCommit={handleValueCommit}
       min={min}
       max={max}
       step={1}
     >
+      {isTouch && isDragging && (
+        <div
+          className="absolute bottom-full -translate-x-1/2 mb-1 text-xs font-mono px-2 py-1 bg-violet-800 text-white rounded z-50 pointer-events-none"
+          style={{
+            left: `clamp(1.75rem, ${(value / max) * 100}%, calc(100% - 1.75rem))`,
+          }}
+        >
+          {formatElapsed(value - countdownLength)}
+        </div>
+      )}
+
       <div
         className={clsx("absolute w-full h-2", {
           "opacity-0": !useRange,
@@ -127,7 +175,8 @@ const SliderRoot = ({ max }: { max: number }) => {
 
       <Slider.Track
         className={clsx(
-          "relative grow h-1 transition-size group-hover:h-2 bg-gray-500",
+          "relative grow transition-size group-hover:h-2 bg-gray-500",
+          isTouch ? "h-2 rounded-full" : "h-1",
           { "opacity-0": useRange },
         )}
       >
@@ -141,11 +190,16 @@ const SliderRoot = ({ max }: { max: number }) => {
 
       <Slider.Thumb
         className={clsx(
-          "block w-1 focus:outline-hidden pointer-events-none transition-size",
-          {
-            "h-5 bg-white": useRange,
-            "h-3 bg-violet-500 group-hover:bg-white group-hover:h-5": !useRange,
-          },
+          "block focus:outline-hidden pointer-events-none transition-size",
+          isTouch
+            ? clsx("w-5 h-5 rounded-full bg-white shadow", {
+                "scale-125": isDragging,
+              })
+            : {
+                "w-1 h-5 bg-white": useRange,
+                "w-1 h-3 bg-violet-500 group-hover:bg-white group-hover:h-5":
+                  !useRange,
+              },
         )}
       />
     </Slider.Root>
