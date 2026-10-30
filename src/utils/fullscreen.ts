@@ -17,6 +17,9 @@ type SavedStyles = {
   elementCss: string;
   htmlCss: string;
   bodyCss: string;
+  // ios may scroll the page under the full-window player, leaving it scrolled on exit
+  scrollX: number;
+  scrollY: number;
 };
 
 let savedStyles: SavedStyles | null = null;
@@ -89,6 +92,8 @@ function enterFullWindow(elementId: string) {
     elementCss: element.style.cssText,
     htmlCss: html.style.cssText,
     bodyCss: body.style.cssText,
+    scrollX: window.scrollX,
+    scrollY: window.scrollY,
   };
 
   // style the container, not the canvas: fte strips inline width/height from the canvas on resize
@@ -108,11 +113,13 @@ export function exitFullWindow() {
     return;
   }
 
-  const { element, elementCss, htmlCss, bodyCss } = savedStyles;
+  const { element, elementCss, htmlCss, bodyCss, scrollX, scrollY } =
+    savedStyles;
   savedStyles = null;
   element.style.cssText = elementCss;
   document.documentElement.style.cssText = htmlCss;
   document.body.style.cssText = bodyCss;
+  window.scrollTo(scrollX, scrollY);
   setViewportFitCover(false);
   notifyChange();
 }
