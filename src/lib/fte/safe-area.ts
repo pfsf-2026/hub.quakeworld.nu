@@ -11,14 +11,16 @@ let wasMoved = false;
 
 // notched iphones in full-window landscape: the frag list (top left) is drawn under the
 // dynamic island when it is on the left. move it right by the left safe area, which is
-// 0 everywhere else (viewport-fit=cover is only set in full-window)
+// 0 everywhere else (viewport-fit=cover is only set in full-window). ios reports the
+// same inset on both sides in landscape, so the island side comes from the orientation
 export function useTrackerSafeArea() {
   const fte = useFteController();
   const [insetLeft, setInsetLeft] = useState(0);
   // the viewport-fit change applies on the next layout
+  const read = () => (isIslandOnLeft() ? readSafeAreaInsetLeft() : 0);
   const update = () => {
-    setInsetLeft(readSafeAreaInsetLeft());
-    requestAnimationFrame(() => setInsetLeft(readSafeAreaInsetLeft()));
+    setInsetLeft(read());
+    requestAnimationFrame(() => setInsetLeft(read()));
   };
 
   useEventListener("resize", update);
@@ -33,6 +35,18 @@ export function useTrackerSafeArea() {
     wasMoved = insetLeft > 0;
     fte.command("r_tracker_x", TRACKER_X + insetLeft / window.innerWidth);
   }, [fte, insetLeft]);
+}
+
+// the top of the phone (the island) is on the left: turned counterclockwise.
+// window.orientation (ios) 90 is screen.orientation.angle 270
+function isIslandOnLeft(): boolean {
+  const legacy = (window as Window & { orientation?: number }).orientation;
+
+  if (typeof legacy === "number") {
+    return legacy === 90;
+  }
+
+  return screen.orientation?.angle === 270;
 }
 
 function readSafeAreaInsetLeft(): number {
