@@ -1,4 +1,6 @@
 import clsx from "clsx";
+import { useReducer } from "react";
+import { useEventListener } from "usehooks-ts";
 import { FtePlayerCanvas } from "@/components/fte-player/fte-player-canvas";
 import { FteSettings } from "@/components/fte-player/settings";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
@@ -8,6 +10,8 @@ import { getDownloadUrl } from "@/lib/cloudfront/demos";
 import type { DemoInfo } from "@/lib/cloudfront/types";
 import { getDemoPlayerAssets, getFteBuildUrl } from "@/lib/fte/assets";
 import { useFteController, useFteLoader } from "@/lib/fte/hooks";
+import { DISPLAY_MODE_CHANGE, isFullWindow } from "@/utils/fullscreen";
+import { isIOS } from "@/utils/ios";
 import { getMapshotCssUrl } from "@/utils/mapshots";
 import { FteDemoPlayerControls } from "./fte-demo-player-controls";
 
@@ -44,6 +48,7 @@ const DemoPlayer = ({
       countdownDuration,
     });
   const fte = useFteController();
+  useDisplayModeUpdate();
 
   return (
     <div
@@ -85,10 +90,23 @@ const DemoPlayer = ({
         </div>
       </div>
       {fte && (
-        <div id="ftePlayerControls" className={"absolute z-30 bottom-0 w-full"}>
+        <div
+          id="ftePlayerControls"
+          className={"absolute z-30 bottom-0 w-full"}
+          // ios full-window: the controls sit at the screen bottom, raise them to leave room
+          // below the time slider for fine scrubbing (slide down)
+          style={isTouch && isFullWindow() ? { bottom: "4rem" } : undefined}
+        >
           <FteDemoPlayerControls />
         </div>
       )}
     </div>
   );
 };
+
+const isTouch = isIOS();
+
+function useDisplayModeUpdate() {
+  const [, update] = useReducer((x: number) => x + 1, 0);
+  useEventListener(DISPLAY_MODE_CHANGE, update);
+}

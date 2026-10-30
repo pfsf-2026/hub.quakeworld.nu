@@ -136,14 +136,14 @@ const SliderRoot = ({
     releaseTimeout.current = window.setTimeout(() => setDragValue(null), 500);
   }
 
-  // distance of the finger above or below the bar (the bar may sit at the screen bottom)
+  // distance of the finger below the bar (above it, the finger would cover the time bubble)
   function handlePointer(e: React.PointerEvent<HTMLElement>) {
     if (!isTouch || e.pointerType !== "touch") {
       return;
     }
 
     const { top, height } = e.currentTarget.getBoundingClientRect();
-    scrub.current.distance = Math.abs(e.clientY - (top + height / 2));
+    scrub.current.distance = Math.max(0, e.clientY - (top + height / 2));
 
     if (e.type === "pointerdown") {
       scrub.current.lastFingerValue = -1;
@@ -244,7 +244,7 @@ const SliderRoot = ({
   );
 };
 
-// slide the finger away from the bar (up or down) to scrub slower, like ios media players
+// slide the finger down from the bar to scrub slower, like ios media players
 const SCRUB_SPEEDS = [
   { distance: 0, factor: 1, label: "" },
   { distance: 40, factor: 1 / 4, label: " · ¼ speed" },
