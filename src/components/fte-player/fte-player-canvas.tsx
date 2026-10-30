@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { useEventListener, useResizeObserver } from "usehooks-ts";
 import { useMouseIdle } from "@/hooks/use-mouse-idle";
 import { useWakeLock } from "@/hooks/use-wake-lock";
+import { useTrackerSafeArea } from "@/lib/fte/safe-area";
 import { exitFullWindow } from "@/utils/fullscreen";
 
 declare global {
@@ -22,6 +23,9 @@ export const FtePlayerCanvas = () => {
 
   // prevent screen idle
   useWakeLock();
+
+  // keep the frag list clear of the dynamic island (notched iphones, full-window)
+  useTrackerSafeArea();
 
   // never leave the page clipped by full-window mode
   useEffect(() => exitFullWindow, []);
